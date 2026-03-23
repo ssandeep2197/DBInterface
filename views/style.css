@@ -1,0 +1,56 @@
+#log-section{
+    border: 1px black solid;
+    /* display: inline-block; */
+    width: fit-content;
+    margin-left: auto;
+    margin-top: 120px;
+    padding: 60px;
+    margin-right: auto;
+    text-align: center;
+  background-color: rgba(218, 213, 213, 0.39);
+}
+p{
+    margin-top: 3px;
+    color: red;
+    font-size: 19px;
+   visibility: hidden;
+}
+   
+
+input{
+    display: block;
+    font-family: 'Raleway', sans-serif;
+    margin-top: 35px;
+    text-align: center;
+     height: 30px;
+    outline: 0;
+    border: 0;
+    border-bottom: 1px black solid;
+    font-size: 20px;
+    background-color: initial;
+}
+
+button{
+    margin-top: 20px;
+    background-color: black;
+    color: white;
+    border: 0;
+    outline: 0;
+    border-radius: 10px;
+    width: 100px;
+    height: 40px;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+img{
+    margin-top: 20px;
+    height: 80px;
+    width: 80px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+h1{ 
+    font-family: 'Raleway', sans-serif;
+}
