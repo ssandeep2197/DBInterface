@@ -1,9 +1,9 @@
 import { isSystemDatabase } from '@dbi/shared';
-import { DatabaseRepository } from '../repositories/database.repository';
+import type { DatabaseRepository } from '../repositories/database.repository';
 import { HttpError } from '../lib/http-error';
 
 export class DatabaseService {
-  constructor(private readonly repo = new DatabaseRepository()) {}
+  constructor(private readonly repo: DatabaseRepository) {}
 
   list() {
     return this.repo.listDatabases();

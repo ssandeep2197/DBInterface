@@ -7,15 +7,12 @@ import {
   sqlIdentifier,
   updateRowSchema,
 } from '@dbi/shared';
-import { RowService } from '../services/row.service';
-import { TableService } from '../services/table.service';
+import { services } from '../services/factory';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { asyncHandler } from '../middleware/async-handler';
 
 const router = Router();
-const rows = new RowService();
-const tables = new TableService();
 
 router.use(requireAuth);
 
@@ -24,9 +21,10 @@ router.get(
   validate(z.object({ database: sqlIdentifier, table: sqlIdentifier }), 'params'),
   asyncHandler(async (req, res) => {
     const { database, table } = req.params;
+    const s = services(req);
     const [schema, data] = await Promise.all([
-      tables.describe(database, table),
-      rows.selectAll(database, table),
+      s.table.describe(database, table),
+      s.row.selectAll(database, table),
     ]);
     res.json({ schema, rows: data });
   }),
@@ -37,7 +35,7 @@ router.post(
   validate(insertRowSchema),
   asyncHandler(async (req, res) => {
     const { database, table, values } = req.body;
-    const result = await rows.insert(database, table, values);
+    const result = await services(req).row.insert(database, table, values);
     res.status(201).json(result);
   }),
 );
@@ -47,7 +45,7 @@ router.patch(
   validate(updateRowSchema),
   asyncHandler(async (req, res) => {
     const { database, table, values, where } = req.body;
-    const result = await rows.update(database, table, values, where);
+    const result = await services(req).row.update(database, table, values, where);
     res.json(result);
   }),
 );
@@ -57,7 +55,7 @@ router.delete(
   validate(deleteRowSchema),
   asyncHandler(async (req, res) => {
     const { database, table, where } = req.body;
-    const result = await rows.delete(database, table, where);
+    const result = await services(req).row.delete(database, table, where);
     res.json(result);
   }),
 );
@@ -67,7 +65,7 @@ router.post(
   validate(searchRowSchema),
   asyncHandler(async (req, res) => {
     const { database, table, column, query } = req.body;
-    const result = await rows.search(database, table, column, query);
+    const result = await services(req).row.search(database, table, column, query);
     res.json({ rows: result });
   }),
 );

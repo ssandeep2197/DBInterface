@@ -1,28 +1,27 @@
-import { reinitPool, closePool } from '../db/pool';
-import { HttpError } from '../lib/http-error';
-import { logger } from '../lib/logger';
+import type { ConnectionOptions } from '@dbi/shared';
+import { registry } from '../db/registry';
 
 /**
- * Authenticate against MySQL by attempting a `SELECT 1` with the supplied password.
- * On success the pool is initialized with that password for the rest of the session.
- *
- * This preserves the original tool's UX (sign in with your MySQL root password) while
- * fixing the security model: a real session, no module-level "logged" flag, and a real
- * connection pool instead of one shared connection.
+ * Authenticate by attempting a real connection with the provided credentials.
+ * On success, the registry holds a pool keyed by `connectionId`; the session
+ * stores only the id and a non-sensitive metadata snapshot, never the password.
  */
 export class AuthService {
-  async login(password: string): Promise<void> {
-    const pool = await reinitPool(password);
-    try {
-      await pool.query('SELECT 1');
-    } catch (err) {
-      await closePool();
-      logger.warn({ err: (err as Error).message }, 'mysql auth failed');
-      throw HttpError.unauthorized('invalid credentials');
-    }
+  async login(connectionId: string, opts: ConnectionOptions): Promise<void> {
+    await registry.create(
+      connectionId,
+      {
+        host: opts.host,
+        port: opts.port,
+        user: opts.user,
+        database: opts.database || undefined,
+        useTLS: opts.useTLS,
+      },
+      opts.password,
+    );
   }
 
-  async logout(): Promise<void> {
-    await closePool();
+  async logout(connectionId: string): Promise<void> {
+    await registry.destroy(connectionId);
   }
 }

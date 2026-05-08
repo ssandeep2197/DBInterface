@@ -1,10 +1,12 @@
 import { Outlet, Link, useNavigate, useParams } from 'react-router-dom';
-import { useLogout } from '../hooks/useSession';
+import { useLogout, useSession } from '../hooks/useSession';
 
 export function AppShell() {
   const params = useParams();
   const navigate = useNavigate();
   const logout = useLogout();
+  const session = useSession();
+  const conn = session.data?.connection;
 
   return (
     <div className="shell">
@@ -27,6 +29,12 @@ export function AppShell() {
             </>
           )}
         </nav>
+        {conn && (
+          <span className="connection-pill" title={`${conn.user}@${conn.host}:${conn.port}`}>
+            ● {conn.user}@{conn.host}
+            {conn.useTLS ? ' · TLS' : ''}
+          </span>
+        )}
         <button
           className="btn btn-ghost"
           onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}

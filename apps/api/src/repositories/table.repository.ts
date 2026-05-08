@@ -1,7 +1,5 @@
-import type { RowDataPacket } from 'mysql2/promise';
-import type { ColumnDefinition } from '@dbi/shared';
-import type { ColumnSchema } from '@dbi/shared';
-import { getPool } from '../db/pool';
+import type { Pool, RowDataPacket } from 'mysql2/promise';
+import type { ColumnDefinition, ColumnSchema } from '@dbi/shared';
 import { quoteIdent, quoteRef } from '../lib/sql';
 
 const COLUMN_TYPE_SQL: Record<ColumnDefinition['type'], (def: ColumnDefinition) => string> = {
@@ -15,8 +13,10 @@ const COLUMN_TYPE_SQL: Record<ColumnDefinition['type'], (def: ColumnDefinition) 
 };
 
 export class TableRepository {
+  constructor(private readonly pool: Pool) {}
+
   async listTables(database: string): Promise<string[]> {
-    const [rows] = await getPool().query<RowDataPacket[]>(
+    const [rows] = await this.pool.query<RowDataPacket[]>(
       `SELECT table_name AS name FROM information_schema.tables WHERE table_schema = ?`,
       [database],
     );
@@ -39,25 +39,25 @@ export class TableRepository {
     }
 
     const sql = `CREATE TABLE IF NOT EXISTS ${quoteRef(database, table)} (${parts.join(', ')})`;
-    await getPool().query(sql);
+    await this.pool.query(sql);
   }
 
   async dropTable(database: string, table: string): Promise<void> {
-    await getPool().query(`DROP TABLE ${quoteRef(database, table)}`);
+    await this.pool.query(`DROP TABLE ${quoteRef(database, table)}`);
   }
 
   async truncateTable(database: string, table: string): Promise<void> {
-    await getPool().query(`TRUNCATE TABLE ${quoteRef(database, table)}`);
+    await this.pool.query(`TRUNCATE TABLE ${quoteRef(database, table)}`);
   }
 
   async renameTable(database: string, oldName: string, newName: string): Promise<void> {
-    await getPool().query(
+    await this.pool.query(
       `RENAME TABLE ${quoteRef(database, oldName)} TO ${quoteRef(database, newName)}`,
     );
   }
 
   async describeTable(database: string, table: string): Promise<ColumnSchema[]> {
-    const [rows] = await getPool().query<RowDataPacket[]>(
+    const [rows] = await this.pool.query<RowDataPacket[]>(
       `SHOW COLUMNS FROM ${quoteRef(database, table)}`,
     );
     return rows as unknown as ColumnSchema[];
@@ -69,7 +69,7 @@ export class TableRepository {
     oldName: string,
     newName: string,
   ): Promise<void> {
-    await getPool().query(
+    await this.pool.query(
       `ALTER TABLE ${quoteRef(database, table)} RENAME COLUMN ${quoteIdent(oldName)} TO ${quoteIdent(newName)}`,
     );
   }

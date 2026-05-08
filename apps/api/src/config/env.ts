@@ -1,5 +1,19 @@
 import { z } from 'zod';
 
+/**
+ * Parse string env vars as booleans, defaulting to `fallback` when the var is
+ * absent. `z.coerce.boolean()` treats any non-empty string as truthy — so
+ * "false", "0", "no" would all become true. This treats those values correctly.
+ */
+const envBoolean = (fallback: boolean) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (v === undefined) return fallback;
+      return ['true', '1', 'yes', 'on'].includes(v.toLowerCase());
+    });
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -11,11 +25,19 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
 
-  MYSQL_HOST: z.string().default('127.0.0.1'),
-  MYSQL_PORT: z.coerce.number().int().min(1).max(65535).default(3306),
-  MYSQL_USER: z.string().default('root'),
-  MYSQL_PASSWORD: z.string().default(''),
-  MYSQL_CONNECTION_LIMIT: z.coerce.number().int().positive().max(100).default(10),
+  /**
+   * When true, reject MySQL connection attempts that resolve to private/loopback
+   * IP ranges (10/8, 172.16/12, 192.168/16, 127/8, ::1, fc00::/7, etc.). Set to
+   * `true` for any internet-facing deployment to limit SSRF blast radius.
+   */
+  BLOCK_PRIVATE_HOSTS: envBoolean(false),
+
+  /**
+   * When true, set the session cookie with `sameSite: 'none'` and `secure: true`
+   * so the cookie crosses origins (web on Vercel, api on Render, etc.). Requires
+   * HTTPS in production.
+   */
+  CROSS_SITE_COOKIES: envBoolean(false),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

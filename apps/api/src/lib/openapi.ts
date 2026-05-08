@@ -40,13 +40,32 @@ export const openApiSpec = {
     '/auth/login': {
       post: {
         tags: ['auth'],
-        summary: 'Sign in with the MySQL root password',
+        summary: 'Open a MySQL connection (any host)',
         security: [],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object', properties: { password: { type: 'string' } }, required: ['password'] } } },
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['host', 'user'],
+                properties: {
+                  host: { type: 'string', example: '127.0.0.1' },
+                  port: { type: 'integer', default: 3306 },
+                  user: { type: 'string', example: 'root' },
+                  password: { type: 'string' },
+                  database: { type: 'string', nullable: true },
+                  useTLS: { type: 'boolean', default: false },
+                },
+              },
+            },
+          },
         },
-        responses: { '200': { description: 'ok' }, '401': { description: 'invalid credentials' } },
+        responses: {
+          '200': { description: 'connected' },
+          '401': { description: 'connection failed' },
+          '403': { description: 'host blocked or connection limit reached' },
+        },
       },
     },
     '/auth/logout': {

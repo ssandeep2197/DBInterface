@@ -2,11 +2,12 @@ import 'dotenv/config';
 import { createApp } from './app';
 import { loadEnv } from './config/env';
 import { logger } from './lib/logger';
-import { closePool } from './db/pool';
+import { registry } from './db/registry';
 
 async function main() {
   const env = loadEnv();
   const app = createApp();
+  registry.startSweep();
   const server = app.listen(env.API_PORT, () => {
     logger.info(`api listening on http://localhost:${env.API_PORT}`);
     logger.info(`api docs at http://localhost:${env.API_PORT}/api/docs`);
@@ -15,7 +16,8 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received, shutting down`);
     server.close(() => undefined);
-    await closePool();
+    registry.stopSweep();
+    await registry.destroyAll();
     process.exit(0);
   };
 

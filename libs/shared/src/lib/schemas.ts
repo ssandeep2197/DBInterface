@@ -3,10 +3,28 @@ import { sqlIdentifier } from './identifiers';
 
 const columnTypeEnum = z.enum(['INT', 'VARCHAR', 'TEXT', 'BOOLEAN', 'DATETIME', 'DATE', 'DECIMAL']);
 
-export const loginRequestSchema = z.object({
-  password: z.string().min(1, 'password required').max(256),
+export const connectionOptionsSchema = z.object({
+  host: z
+    .string()
+    .min(1, 'host required')
+    .max(253, 'host too long')
+    .regex(/^[A-Za-z0-9.\-_]+$/, 'invalid host'),
+  port: z.coerce.number().int().min(1).max(65535).default(3306),
+  user: z.string().min(1, 'user required').max(64),
+  password: z.string().max(256).default(''),
+  database: z
+    .string()
+    .max(64)
+    .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'invalid database name')
+    .optional()
+    .or(z.literal('')),
+  useTLS: z.coerce.boolean().default(false),
 });
-export type LoginRequest = z.infer<typeof loginRequestSchema>;
+export type ConnectionOptions = z.infer<typeof connectionOptionsSchema>;
+
+/** Backwards-compatible alias — the login endpoint takes the full connection. */
+export const loginRequestSchema = connectionOptionsSchema;
+export type LoginRequest = ConnectionOptions;
 
 export const createDatabaseSchema = z.object({
   name: sqlIdentifier,

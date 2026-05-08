@@ -1,12 +1,6 @@
-import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
-import { getPool } from '../db/pool';
+import type { Pool, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { quoteIdent, quoteRef } from '../lib/sql';
 
-/**
- * Build a parameterized WHERE clause from a record of column → value pairs.
- * Returns the clause text and the ordered values array, suitable for the `?`
- * placeholder style used by mysql2.
- */
 function buildWhere(where: Record<string, unknown>): { clause: string; values: unknown[] } {
   const cols = Object.keys(where);
   if (cols.length === 0) {
@@ -18,12 +12,14 @@ function buildWhere(where: Record<string, unknown>): { clause: string; values: u
 }
 
 export class RowRepository {
+  constructor(private readonly pool: Pool) {}
+
   async selectAll(
     database: string,
     table: string,
     limit = 1000,
   ): Promise<Record<string, unknown>[]> {
-    const [rows] = await getPool().query<RowDataPacket[]>(
+    const [rows] = await this.pool.query<RowDataPacket[]>(
       `SELECT * FROM ${quoteRef(database, table)} LIMIT ?`,
       [limit],
     );
@@ -42,7 +38,7 @@ export class RowRepository {
     const colSql = cols.map((c) => quoteIdent(c)).join(', ');
     const placeholders = cols.map(() => '?').join(', ');
     const params = cols.map((c) => values[c]);
-    const [result] = await getPool().query<ResultSetHeader>(
+    const [result] = await this.pool.query<ResultSetHeader>(
       `INSERT INTO ${quoteRef(database, table)} (${colSql}) VALUES (${placeholders})`,
       params,
     );
@@ -67,7 +63,7 @@ export class RowRepository {
       throw new Error('update requires a WHERE clause');
     }
 
-    const [result] = await getPool().query<ResultSetHeader>(
+    const [result] = await this.pool.query<ResultSetHeader>(
       `UPDATE ${quoteRef(database, table)} SET ${setSql} WHERE ${whereSql}`,
       [...setParams, ...whereParams],
     );
@@ -83,7 +79,7 @@ export class RowRepository {
     if (!clause) {
       throw new Error('delete requires a WHERE clause');
     }
-    const [result] = await getPool().query<ResultSetHeader>(
+    const [result] = await this.pool.query<ResultSetHeader>(
       `DELETE FROM ${quoteRef(database, table)} WHERE ${clause}`,
       values,
     );
@@ -97,7 +93,7 @@ export class RowRepository {
     query: string,
     limit = 200,
   ): Promise<Record<string, unknown>[]> {
-    const [rows] = await getPool().query<RowDataPacket[]>(
+    const [rows] = await this.pool.query<RowDataPacket[]>(
       `SELECT * FROM ${quoteRef(database, table)} WHERE ${quoteIdent(column)} LIKE ? LIMIT ?`,
       [`%${query}%`, limit],
     );

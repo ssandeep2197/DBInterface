@@ -1,13 +1,8 @@
 import { isSystemDatabase } from '@dbi/shared';
-import { RowRepository } from '../repositories/row.repository';
-import { TableRepository } from '../repositories/table.repository';
+import type { RowRepository } from '../repositories/row.repository';
+import type { TableRepository } from '../repositories/table.repository';
 import { HttpError } from '../lib/http-error';
 
-/**
- * Validates that every key in `values` is a real column of the target table.
- * Without this, a malicious client could pass a key that fails identifier validation
- * later — better to reject up front with a 400.
- */
 async function ensureColumnsExist(
   tables: TableRepository,
   database: string,
@@ -24,8 +19,8 @@ async function ensureColumnsExist(
 
 export class RowService {
   constructor(
-    private readonly rows = new RowRepository(),
-    private readonly tables = new TableRepository(),
+    private readonly rows: RowRepository,
+    private readonly tables: TableRepository,
   ) {}
 
   private guardSystem(database: string) {

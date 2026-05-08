@@ -1,10 +1,10 @@
 import type { ColumnDefinition } from '@dbi/shared';
 import { isSystemDatabase } from '@dbi/shared';
-import { TableRepository } from '../repositories/table.repository';
+import type { TableRepository } from '../repositories/table.repository';
 import { HttpError } from '../lib/http-error';
 
 export class TableService {
-  constructor(private readonly repo = new TableRepository()) {}
+  constructor(private readonly repo: TableRepository) {}
 
   private guardSystem(database: string) {
     if (isSystemDatabase(database)) {

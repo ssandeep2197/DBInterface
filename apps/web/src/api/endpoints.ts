@@ -1,6 +1,7 @@
 import type {
   ColumnDefinition,
   ColumnSchema,
+  ConnectionOptions,
   CreateDatabaseRequest,
   CreateTableRequest,
   DatabasesResponse,
@@ -9,16 +10,26 @@ import type {
   RenameColumnRequest,
   RenameTableRequest,
   SearchRowRequest,
-  SessionInfo,
   TablesResponse,
   UpdateRowRequest,
 } from '@dbi/shared';
 import { api } from './client';
 
+export interface SessionResponse {
+  authenticated: boolean;
+  connection?: {
+    host: string;
+    port: number;
+    user: string;
+    database?: string;
+    useTLS: boolean;
+  };
+}
+
 export const auth = {
-  session: () => api.get<SessionInfo>('/auth/session'),
-  login: (password: string) => api.post<SessionInfo>('/auth/login', { password }),
-  logout: () => api.post<SessionInfo>('/auth/logout'),
+  session: () => api.get<SessionResponse>('/auth/session'),
+  login: (opts: ConnectionOptions) => api.post<SessionResponse>('/auth/login', opts),
+  logout: () => api.post<SessionResponse>('/auth/logout'),
 };
 
 export const databases = {

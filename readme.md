@@ -48,19 +48,31 @@ src/
     http-error.ts        Typed HttpError thrown by services/routes
     sql.ts               quoteIdent / quoteRef — only place identifiers go to SQL
     openapi.ts           OpenAPI spec served at /api/docs
-  db/pool.ts             mysql2 connection pool
+  db/
+    registry.ts          Per-session connection registry (one mysql2 pool per
+                         signed-in user, idle-swept after 30 min)
+    private-host.ts      IP-range guard for SSRF defense
   middleware/            request-id, auth, validate, error-handler, async-handler
-  repositories/          Only layer that builds SQL (database/table/row)
-  services/              Business logic, system-DB guards, column existence checks
-  routes/                Thin handlers wired with Zod validators
+  repositories/          Only layer that builds SQL (database/table/row).
+                         Pool is constructor-injected — no module globals.
+  services/
+    factory.ts           Request-scoped service container — resolves the pool
+                         from the session and wires repos into services
+    *.service.ts         Business logic, system-DB guards, column existence checks
+  routes/                Thin handlers; each call goes through services(req)
   app.ts                 Express composition (helmet, cors, session, rate-limit)
-  main.ts                Entry point — graceful shutdown on SIGINT/SIGTERM
+  main.ts                Entry point — starts the registry's idle sweep,
+                         graceful shutdown on SIGINT/SIGTERM
 ```
 
 **Security upgrades over the original:**
 
 - All values pass through `mysql2` placeholders. All identifiers (db / table / column names) pass through a strict allowlist (`^[A-Za-z_][A-Za-z0-9_]*$`, ≤ 64 chars) before being backtick-quoted. The original concatenated user input directly into SQL.
-- Real session-based auth via `express-session` with a signed, httpOnly, sameSite cookie — replaces the global `logged` boolean that broke under concurrency.
+- Real session-based auth via `express-session` with a signed, httpOnly cookie — replaces the global `logged` boolean that broke under concurrency.
+- **Per-session MySQL pools.** Each user opens their own pool keyed by session id; credentials live in the pool object on the server, never in the session cookie.
+- **Connect to any MySQL.** Login takes `host`, `port`, `user`, `password`, optional `database`, and a TLS toggle — works against local installs, AWS RDS, PlanetScale, TiDB Cloud, Aiven, etc. TLS connects with `rejectUnauthorized: true`.
+- **SSRF guard.** Set `BLOCK_PRIVATE_HOSTS=true` for internet-facing deployments; the registry resolves the host through DNS and rejects `127/8`, `10/8`, `172.16/12`, `192.168/16`, `169.254/16`, `::1`, `fe80::/10`, `fc00::/7`.
+- **Connection caps.** Max 50 concurrent pools; 5 connections per user; 10s connect timeout; 30 min idle sweep.
 - `helmet`, `cors` (origin-locked, credentialed), `express-rate-limit`, request IDs, structured pino logs with sensitive-field redaction.
 - System databases (`mysql`, `information_schema`, …) are explicitly guarded against destructive ops.
 
@@ -100,7 +112,9 @@ cd dbinterface
 cp .env.example .env
 #    Edit .env and set at minimum:
 #      SESSION_SECRET   — any 32+ char random string
-#      MYSQL_PASSWORD   — your MySQL root password (leave empty if none)
+#    For internet-facing deployments also set:
+#      BLOCK_PRIVATE_HOSTS=true
+#      CROSS_SITE_COOKIES=true   (if web and api are on different origins)
 
 # 3. Install dependencies
 npm install
@@ -112,7 +126,15 @@ docker compose -f docker-compose.dev.yml up -d
 npm run dev
 ```
 
-Then open **http://localhost:4200** in your browser and sign in with your MySQL root password.
+Then open **http://localhost:4200**. The login form takes:
+
+- **Host** — `127.0.0.1` for local, or any reachable hostname (PlanetScale, RDS, TiDB Cloud, …)
+- **Port** — defaults to `3306` (TiDB Cloud uses `4000`)
+- **User** / **Password**
+- **Database** (optional) — connect scoped to a specific schema
+- **Use TLS** — required by most hosted MySQL providers
+
+Click a preset chip (Local MySQL, PlanetScale, TiDB Cloud, AWS RDS) to auto-fill the host/port/TLS combo.
 
 | Service        | URL                                |
 | -------------- | ---------------------------------- |
@@ -153,9 +175,21 @@ npm run build      # build both apps to dist/
 ### Troubleshooting
 
 - **"SESSION_SECRET must be at least 32 chars"** — the api fails fast on a missing or short secret. Fix `.env` and restart.
-- **"Pool is closed" after login** — restart the api; you're likely on a stale build before the per-query `getPool()` fix.
+- **"connection failed: Access denied"** — wrong user/password for that host. The API forwards MySQL's exact error.
+- **"host resolves to a blocked range"** — `BLOCK_PRIVATE_HOSTS=true` is rejecting a private/loopback IP. Set it to `false` for local dev.
+- **"connection expired — please sign in again"** — the api restarted; the in-memory pool is gone but your cookie isn't. Just sign in again.
+- **"connection failed: self signed certificate"** — uncheck "Use TLS" or use a provider that issues a CA-signed cert.
 - **`npm install` errors with EACCES on `node_modules`** — leftover root-owned `node_modules.old` from the original Docker build. Run `sudo rm -rf node_modules.old` to clear it.
-- **MySQL port conflict on 3306** — either stop your local MySQL or change `MYSQL_PORT` in `.env`.
+
+### Public-deployment safety checklist
+
+Don't deploy this open to the internet. If you must (e.g. interview demo), at minimum:
+
+- `BLOCK_PRIVATE_HOSTS=true` to block SSRF to internal addresses
+- `CROSS_SITE_COOKIES=true` if web and api live on different origins (HTTPS only)
+- `RATE_LIMIT_MAX` cranked low and `RATE_LIMIT_WINDOW_MS` raised to limit brute-force
+- A scoped MySQL user (not `root`) on the demo database, granted only what's needed
+- Consider an IP allowlist in front of the api (Cloudflare Access, etc.)
 
 ## Scripts
 

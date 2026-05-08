@@ -46,8 +46,8 @@ export function createApp(): Express {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: isProd(env),
+        sameSite: env.CROSS_SITE_COOKIES ? 'none' : 'lax',
+        secure: env.CROSS_SITE_COOKIES || isProd(env),
         maxAge: env.SESSION_MAX_AGE_MS,
       },
     }),
