@@ -1,0 +1,57 @@
+# Nginx site config for DBInterface.
+# Placeholders:
+#   __SERVER_NAME__   -> domain (e.g. dbi.example.com) or "_" for IP-only
+#   __WEB_ROOT__      -> /opt/dbinterface/dist/apps/web
+#   __API_PORT__      -> 8082
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __SERVER_NAME__;
+
+    # certbot --nginx will inject TLS config here when run with a real domain.
+
+    root __WEB_ROOT__;
+    index index.html;
+
+    # Gzip
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # Long-cache static assets — Vite hashes filenames
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # API + auth -> Node service
+    location ~ ^/(api|auth|health)/ {
+        proxy_pass http://127.0.0.1:__API_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Reasonable timeouts for the connect-to-MySQL flow
+        proxy_connect_timeout 15s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # Bare /health (no trailing slash) — convenience for uptime monitors
+    location = /health {
+        proxy_pass http://127.0.0.1:__API_PORT__;
+        proxy_set_header Host $host;
+    }
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Reasonable upload cap (login JSON, table operations)
+    client_max_body_size 2m;
+}

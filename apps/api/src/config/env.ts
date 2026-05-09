@@ -38,6 +38,13 @@ const envSchema = z.object({
    * HTTPS in production.
    */
   CROSS_SITE_COOKIES: envBoolean(false),
+
+  /**
+   * When true, mark the session cookie `Secure`. Set this for HTTPS deployments.
+   * Leave false for HTTP-only setups (local dev, IP-only VPS demos) — otherwise
+   * the browser drops the cookie and login appears to silently fail.
+   */
+  FORCE_HTTPS: envBoolean(false),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
 
-import { loadEnv, isProd } from './config/env';
+import { loadEnv } from './config/env';
 import { logger } from './lib/logger';
 import { requestId } from './middleware/request-id';
 import { errorHandler, notFound } from './middleware/error-handler';
@@ -47,7 +47,7 @@ export function createApp(): Express {
       cookie: {
         httpOnly: true,
         sameSite: env.CROSS_SITE_COOKIES ? 'none' : 'lax',
-        secure: env.CROSS_SITE_COOKIES || isProd(env),
+        secure: env.CROSS_SITE_COOKIES || env.FORCE_HTTPS,
         maxAge: env.SESSION_MAX_AGE_MS,
       },
     }),

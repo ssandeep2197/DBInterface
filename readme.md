@@ -91,7 +91,18 @@ src/
 
 Zod schemas (`createTableSchema`, `insertRowSchema`, …) and the `sqlIdentifier` validator that both sides import. Means the same rule that guards the SQL layer is also enforced by the form on the way in.
 
-## Steps to run
+## Deploying to a VPS
+
+For a one-line setup on a fresh Ubuntu VPS (Hostinger, DO, Hetzner, …) — see **[DEPLOY.md](./DEPLOY.md)**. TL;DR:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ssandeep2197/DBInterface/main/scripts/setup-vps.sh \
+  | sudo DOMAIN=your.domain.com bash
+```
+
+That handles ufw, Node 20, deploy user, build, systemd, nginx, and Let's Encrypt.
+
+## Steps to run locally
 
 ### Prerequisites
 
