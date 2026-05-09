@@ -68,10 +68,10 @@ ufw allow 80/tcp || true
 ufw allow 443/tcp || true
 yes | ufw enable || true
 
-# ─── 3. Node.js 20 ────────────────────────────────────────────────────────────
-if ! command -v node >/dev/null 2>&1 || ! node -v | grep -qE '^v(20|21|22)\.'; then
-  log "installing Node.js 20 from NodeSource"
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# ─── 3. Node.js 24 LTS ────────────────────────────────────────────────────────
+if ! command -v node >/dev/null 2>&1 || ! node -v | grep -qE '^v24\.'; then
+  log "installing Node.js 24 LTS from NodeSource"
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
   apt-get install -y nodejs
 else
   log "Node.js already installed: $(node -v)"

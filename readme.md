@@ -93,14 +93,31 @@ Zod schemas (`createTableSchema`, `insertRowSchema`, …) and the `sqlIdentifier
 
 ## Deploying to a VPS
 
-For a one-line setup on a fresh Ubuntu VPS (Hostinger, DO, Hetzner, …) — see **[DEPLOY.md](./DEPLOY.md)**. TL;DR:
+Two paths depending on what you're optimising for:
+
+### Single-project, traditional Linux stack — see **[DEPLOY.md](./DEPLOY.md)**
+
+systemd + nginx + Let's Encrypt on the host. Lightest weight. One command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ssandeep2197/DBInterface/main/scripts/setup-vps.sh \
   | sudo DOMAIN=your.domain.com bash
 ```
 
-That handles ufw, Node 20, deploy user, build, systemd, nginx, and Let's Encrypt.
+### Multi-project on Kubernetes (k3s) — see **[K8S.md](./K8S.md)**
+
+Subdomain-routed multi-project hosting on a single VPS. ingress-nginx + cert-manager + k3s. Adding a new project later = drop in another set of manifests.
+
+```bash
+# One-time cluster setup
+curl -fsSL https://raw.githubusercontent.com/ssandeep2197/DBInterface/main/scripts/setup-k3s.sh \
+  | sudo ADMIN_EMAIL=you@example.com bash
+
+# Per-project
+git clone https://github.com/ssandeep2197/DBInterface.git && cd DBInterface
+sudo IMAGE_TAG=v1 scripts/build-and-load.sh
+sudo DOMAIN=dbinterface.helloworlds.co.in IMAGE_TAG=v1 scripts/deploy-k8s.sh
+```
 
 ## Steps to run locally
 

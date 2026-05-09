@@ -1,5 +1,5 @@
 ### --- build stage --------------------------------------------------------- ###
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /workspace
 
 COPY package.json package-lock.json* ./
@@ -9,10 +9,13 @@ COPY tsconfig.base.json nx.json ./
 COPY apps/api ./apps/api
 COPY libs/shared ./libs/shared
 
-RUN npx tsc -p apps/api/tsconfig.app.json
+# tsc emits ESM-style require('@dbi/shared') unchanged; tsc-alias rewrites those
+# to relative paths so Node can resolve them without the workspace symlinks.
+RUN npx tsc -p apps/api/tsconfig.app.json \
+ && npx tsc-alias -p apps/api/tsconfig.app.json
 
 ### --- runtime stage ------------------------------------------------------- ###
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

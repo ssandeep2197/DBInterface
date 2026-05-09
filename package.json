@@ -20,7 +20,7 @@
     "format:check": "prettier --check \"{apps,libs}/**/*.{ts,tsx,js,jsx,json,md,css,html}\""
   },
   "engines": {
-    "node": ">=20.10.0",
+    "node": ">=20.10.0 <25.0.0",
     "npm": ">=10.0.0"
   },
   "devDependencies": {

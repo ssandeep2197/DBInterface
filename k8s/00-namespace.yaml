@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dbinterface
+  labels:
+    app.kubernetes.io/name: dbinterface
+    app.kubernetes.io/part-of: helloworlds

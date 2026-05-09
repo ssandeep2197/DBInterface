@@ -1,0 +1,50 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dbi-ingress
+  namespace: dbinterface
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 2m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "15"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - __DOMAIN__
+      secretName: dbi-tls
+  rules:
+    - host: __DOMAIN__
+      http:
+        paths:
+          # /api/*  /auth/*  /health  -> api Service
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: dbi-api
+                port:
+                  number: 8082
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: dbi-api
+                port:
+                  number: 8082
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: dbi-api
+                port:
+                  number: 8082
+          # everything else -> static web Service
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dbi-web
+                port:
+                  number: 80
